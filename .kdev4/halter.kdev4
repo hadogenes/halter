@@ -22,17 +22,23 @@ Type=Native Application
 
 [Launch][Launch Configuration 0][Data]
 Arguments=
-Debugger Shell=
+Debugger Shell=file:///usr/bin/gdbtui
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
 Dependency Action=Build
 Display Demangle Names=true
 Display Static Members=false
 EnvironmentGroup=default
-GDB Path=
-Project Target=halter,halter
+GDB Path=file:///usr/bin/gdb
+Project Target=halter,master
 Remote GDB Config Script=
 Remote GDB Run Script=
 Remote GDB Shell Script=
 Try Setting Breakpoints On Loading Libraries=true
 Working Directory=file:///home/C/Studia/PR/halter
 isExecutable=false
+
+[MakeBuilder]
+Number Of Jobs=1
+
+[Project]
+VersionControlSupport=kdevgit
