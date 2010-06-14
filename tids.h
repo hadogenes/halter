@@ -18,35 +18,22 @@
 
 */
 
-#ifndef APP_H
-#define APP_H
+#ifndef TIDS_H
+#define TIDS_H
 
-#include "joblist.h"
+#include <vector>
 
-enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
 
-class App {
+class Tids : public std::vector<int> {
 	public:
-		App(int procNo, Oper *jobList, size_t jobNo);
+		Tids(int *buffer, size_t n);
 
-		virtual void run() = 0;
-		virtual void send(Instr instr, int arg, int objNo) = 0;
-
-	protected:
 		/**
-		 * Metoda uruchamia aplikacje
-		 * @param amount ile iteracji ma wykonać aplikacja
+		 * Metoda przepisująca bufor (adres) do wektora
 		 */
-		void runLocal(const int amount);
+		void fill(int *buffer, size_t n);
 
-		bool done;
-		int reg;
-		int obj;
-		int instrNo;
-		int procNo;
-
-		WaitFor halt;
-		const JobList jobList;
+		const int *data();
 };
 
-#endif // APP_H
+#endif // TIDS_H

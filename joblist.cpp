@@ -20,6 +20,16 @@
 
 #include "joblist.h"
 
+JobList::JobList() {
+
+}
+
+
+JobList::JobList(Oper* buffer, size_t n) {
+	this->fill(buffer, n);
+}
+
+
 void JobList::fill(Oper* buffer, size_t n) {
 	this->clear();
 

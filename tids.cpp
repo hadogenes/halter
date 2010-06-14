@@ -18,35 +18,21 @@
 
 */
 
-#ifndef APP_H
-#define APP_H
+#include "tids.h"
 
-#include "joblist.h"
+Tids::Tids(int* buffer, size_t n) {
+	this->fill(buffer, n);
+}
 
-enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
 
-class App {
-	public:
-		App(int procNo, Oper *jobList, size_t jobNo);
+void Tids::fill(int* buffer, size_t n) {
+	this->clear();
 
-		virtual void run() = 0;
-		virtual void send(Instr instr, int arg, int objNo) = 0;
+	this->_M_impl._M_start = buffer;
+	this->_M_impl._M_finish = buffer + n;
+	this->_M_impl._M_end_of_storage = this->_M_impl._M_finish;
+}
 
-	protected:
-		/**
-		 * Metoda uruchamia aplikacje
-		 * @param amount ile iteracji ma wykonać aplikacja
-		 */
-		void runLocal(const int amount);
-
-		bool done;
-		int reg;
-		int obj;
-		int instrNo;
-		int procNo;
-
-		WaitFor halt;
-		const JobList jobList;
-};
-
-#endif // APP_H
+const int *Tids::data() {
+	return this->_M_impl._M_start;
+}

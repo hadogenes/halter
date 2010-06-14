@@ -21,26 +21,24 @@
 #ifndef MONITOR_H
 #define MONITOR_H
 
+#define MAX_ITER 10
+
 #include "vclock.h"
 #include "app.h"
+#include "tids.h"
+#include <pvm3.h>
 
 class Monitor : public App {
 	public:
-		Monitor(usint slaveNum, int procNo);
+		Monitor(int procNo, Oper* jobList, size_t jobNo, int* tids, usint slaveNum);
 
 		void run();
-
-		void set(int obj);
-		void get(int obj);
-		void regset(int val);
-		void add(int obj);
-		void inc(int obj);
-		void wait();
+		void send(Instr instr, int arg, int objNo);
 
 	private:
-		void send(Instr instr, int arg, int obj);
+		void receive();
 
-		int procNo;
+		const Tids tids;
 		VClock vClock;
 		VClock vRecordClock;
 		bool recorded;

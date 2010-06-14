@@ -20,34 +20,44 @@
 
 #include "app.h"
 
-App::App() : reg(0), obj(0), done(false), instrNo(0) {
+App::App(int procNo, Oper* jobList, size_t jobNo) : procNo(procNo), jobList(jobList, jobNo) {
+	this->done = false;
+	this->reg = 0;
+	this->obj = 0;
+	this->instrNo = 0;
+	this->halt = WAIT_NONE;
 }
 
 void App::runLocal(const int amount) {
 	for (int i = 0; (i < amount) && (this->instrNo < this->jobList.size()) && (this->halt == WAIT_NONE); ++i, ++this->instrNo) {
 		const Oper &currOper = this->jobList[this->instrNo];
 
-		switch (currOper.instr) {
-			case SET:
-				this->set(currOper.arg);
-				break;
-			case GET:
-				this->get(currOper.arg);
-				break;
-			case REGSET:
-				this->regset(currOper.arg);
-				break;
-			case INC:
-				this->inc(currOper.arg);
-				break;
-			case ADD:
-				this->add(currOper.arg);
-				break;
-			case WAIT:
-				this->wait();
-				break;
+		if ((currOper.instr == REGSET) || (currOper.instr == WAIT) || (currOper.arg == this->procNo)) {
+			switch (currOper.instr) {
+				case SET:
+					this->obj = this->reg;
+					break;
+				case GET:
+					this->reg = this->obj;
+					break;
+				case REGSET:
+					this->reg = currOper.arg;
+					break;
+				case INC:
+					++this->obj;
+					break;
+				case ADD:
+					this->obj += this->reg;
+					break;
+				case WAIT:
+					this->halt = WAIT_VAL;
+					break;
+			}
 		}
+		else
+			this->send(currOper.instr, this->reg, currOper.arg);
 	}
+
 
 	// Jeśli przetwarzanie już się zakończyło i na nic nie czekamy, to zaznacz to
 	if ((this->instrNo >= this->jobList.size()) && (this->halt == WAIT_NONE))

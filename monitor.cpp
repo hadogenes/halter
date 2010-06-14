@@ -20,45 +20,92 @@
 
 #include "monitor.h"
 
-Monitor::Monitor(usint slaveNum, int procNo) : procNo(procNo), vClock(slaveNum + 1), vRecordClock(slaveNum + 1) {
+Monitor::Monitor(int procNo, Oper *jobList, size_t jobNo, int *tids, usint slaveNum) : App(procNo, jobList, jobNo), tids(tids, slaveNum + 1), vClock(slaveNum + 1), vRecordClock(slaveNum + 1) {
+	this->recorded = false;
 }
 
-void Monitor::set(int obj) {
-	if (obj == this->procNo)
-		this->obj = this->reg;
-}
+void Monitor::send(Instr instr, int arg, int objNo) {
+	Oper outMsg = { instr, arg };
+	++this->vClock[this->procNo];
 
-void Monitor::get(int obj){
-	if (obj != this->procNo)
+	pvm_initsend(PvmDataDefault);
+	pvm_pkushort(this->vClock.data(), this->vClock.size(), 1);
+	pvm_pkint(&this->procNo, 1, 1);
+
+	pvm_pkbyte((char *) &outMsg, sizeof(outMsg), 1);
+
+	pvm_send(this->tids[objNo], 1);
+
+	if (outMsg.instr == GET)
 		this->halt = WAIT_GET;
 }
 
-void Monitor::regset(int val) {
-	this->reg = val;
+void Monitor::receive() {
+	VClock inClk(this->vClock.size());
+	int who;
+	Oper inMsg;
+
+	do {
+		pvm_recv(-1, -1);
+		pvm_upkushort(inClk.data(), inClk.size(), 1);
+		this->vClock.concat(inClk);
+
+		pvm_upkint(&who, 1, 1);
+
+		pvm_upkbyte((char *) &inMsg, sizeof(inMsg), 1);
+
+		switch (inMsg.instr) {
+			case SET:
+				this->obj = inMsg.arg;
+
+				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
+					this->halt = WAIT_NONE;
+
+				break;
+
+			case GET:
+				this->send(GET_RESP, this->obj, who);
+				break;
+
+			case INC:
+				++this->obj;
+
+				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
+					this->halt = WAIT_NONE;
+
+				break;
+
+			case ADD:
+				this->obj += inMsg.arg;
+
+				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
+					this->halt = WAIT_NONE;
+
+				break;
+
+			case GET_RESP:
+				this->reg = inMsg.arg;
+				this->halt = WAIT_NONE;
+				break;
+
+			default:
+				break;
+		}
+
+	} while (pvm_probe(-1, -1) > 0);
 }
 
-void Monitor::add(int obj) {
-	if (obj == this->procNo)
-		this->obj += this->reg;
-}
-void Monitor::inc(int obj) {
-	if (obj == this->procNo)
-		++this->obj;
-}
-
-void Monitor::wait() {
-	if (this->obj != this->reg)
-		this->halt = WAIT_VAL;
-}
-
-void Monitor::send(Instr instr, int arg, int obj) {
-	++this->vClock[this->procNo];
-}
 
 void Monitor::run() {
 	while (1) {
-		//if ((this->done) || (this->halt != WAIT_NONE))
+		if ((!this->done) && (this->halt == WAIT_NONE)) {
+			this->runLocal(MAX_ITER);
 
+			if (pvm_probe(-1, -1) <= 0)
+				continue;
+		}
+
+		this->receive();
 	}
 }
 
