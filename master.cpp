@@ -79,7 +79,7 @@ void parseFile(const string &filename, vector<Oper> &commands) {
 int main(int argc, char *argv[]) {
 	vector<Oper> proc;
 
-	parseFile("proc1", proc);
+	parseFile("proc0", proc);
 
 	for (int i = 0; i < proc.size(); ++i) {
 		printf("Instr nr %d: %d", i + 1, proc[i].instr);
