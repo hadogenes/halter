@@ -2,19 +2,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <list>
-#include <vector>
 #include <string>
 #include <string.h>
+
 #include <fstream>
+#include <sstream>
+
+#define FILE_NAME_BASE "proc"
 
 #include "joblist.h"
 
 using std::list;
-using std::vector;
 using std::string;
 using std::ifstream;
 
-void parseFile(const string &filename, vector<Oper> &commands) {
+void parseFile(const string &filename, JobList &commands) {
 	ifstream file(filename.c_str());
 	list<Oper> commandList;
 	Oper newOper;
@@ -77,17 +79,31 @@ void parseFile(const string &filename, vector<Oper> &commands) {
 }
 
 int main(int argc, char *argv[]) {
-	vector<Oper> proc;
+	if (argc != 1) {
+		printf("Usage: %s <numb of slave>", argv[0]);
+		exit(1);
+	}
 
-	parseFile("proc0", proc);
+	int slaveNo = atoi(argv[1]);
+	std::ostringstream ss;
+	const string baseFileName(FILE_NAME_BASE);
 
-	for (int i = 0; i < proc.size(); ++i) {
-		printf("Instr nr %d: %d", i + 1, proc[i].instr);
+	JobList proc;
 
-		if (proc[i].instr != WAIT)
-			 printf(" %d", proc[i].arg);
+	for (int j = 0; j < slaveNo; ++j) {
+		ss << j;
+		parseFile(baseFileName + ss.str(), proc);
 
-		printf("\n");
+		for (int i = 0; i < proc.size(); ++i) {
+			printf("Proc nr %d, Instr nr %d: %d", j, i + 1, proc[i].instr);
+
+			if (proc[i].instr != WAIT)
+				printf(" %d", proc[i].arg);
+
+			printf("\n");
+		}
+
+		ss.clear();
 	}
 
 	return 0;

@@ -21,25 +21,37 @@
 #ifndef APP_H
 #define APP_H
 
+#include "joblist.h"
+
+enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
+
 class App {
 	public:
 		App();
 
-		//void run() = 0;
+		virtual void run() = 0;
 
 	protected:
 		/**
 		 * Metoda uruchamia aplikacje
 		 * @param amount ile iteracji ma wykonać aplikacja
 		 */
-		void run(const int amount);
+		void runLocal(const int amount);
 
-		//void send() = 0;
-		//void get() = 0;
+		virtual void set(int obj) = 0;
+		virtual void get(int obj) = 0;
+		virtual void regset(int val) = 0;
+		virtual void add(int obj) = 0;
+		virtual void inc(int obj) = 0;
+		virtual void wait() = 0;
 
 		bool done;
 		int reg;
 		int obj;
+		int instrNo;
+
+		JobList jobList;
+		WaitFor halt;
 };
 
 #endif // APP_H

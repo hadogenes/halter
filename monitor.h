@@ -26,19 +26,25 @@
 
 class Monitor : public App {
 	public:
-		Monitor(usint slaveNum);
+		Monitor(usint slaveNum, int procNo);
 
-		void send();
-		void get();
+		void run();
+
+		void set(int obj);
+		void get(int obj);
+		void regset(int val);
+		void add(int obj);
+		void inc(int obj);
+		void wait();
 
 	private:
+		void send(Instr instr, int arg, int obj);
+
 		int procNo;
 		VClock vClock;
 		VClock vRecordClock;
 		bool recorded;
 
-
-		bool waitForGet;
 };
 
 #endif // MONITOR_H

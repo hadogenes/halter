@@ -20,11 +20,15 @@
 
 #include "joblist.h"
 
-void JobList::assign(Oper* buffer, size_t n) {
+void JobList::fill(Oper* buffer, size_t n) {
 	this->clear();
 
 	this->_M_impl._M_start = buffer;
 	this->_M_impl._M_finish = buffer + n;
 	this->_M_impl._M_end_of_storage = this->_M_impl._M_finish;
+}
+
+const Oper *JobList::data() {
+	return this->_M_impl._M_start;
 }
 

@@ -20,6 +20,46 @@
 
 #include "monitor.h"
 
-Monitor::Monitor(usint slaveNum) : vClock(slaveNum + 1), vRecordClock(slaveNum + 1) {
-
+Monitor::Monitor(usint slaveNum, int procNo) : procNo(procNo), vClock(slaveNum + 1), vRecordClock(slaveNum + 1) {
 }
+
+void Monitor::set(int obj) {
+	if (obj == this->procNo)
+		this->obj = this->reg;
+}
+
+void Monitor::get(int obj){
+	if (obj != this->procNo)
+		this->halt = WAIT_GET;
+}
+
+void Monitor::regset(int val) {
+	this->reg = val;
+}
+
+void Monitor::add(int obj) {
+	if (obj == this->procNo)
+		this->obj += this->reg;
+}
+void Monitor::inc(int obj) {
+	if (obj == this->procNo)
+		++this->obj;
+}
+
+void Monitor::wait() {
+	if (this->obj != this->reg)
+		this->halt = WAIT_VAL;
+}
+
+void Monitor::send(Instr instr, int arg, int obj) {
+	++this->vClock[this->procNo];
+}
+
+void Monitor::run() {
+	while (1) {
+		//if ((this->done) || (this->halt != WAIT_NONE))
+
+	}
+}
+
+

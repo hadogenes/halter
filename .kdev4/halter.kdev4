@@ -7,7 +7,7 @@ CMakeDir=/usr/share/cmake/Modules
 Current CMake Binary=file:///usr/bin/cmake
 CurrentBuildDir=file:///home/C/Studia/PR/halter/build
 CurrentBuildType=Debug
-CurrentInstallDir=
+CurrentInstallDir=file:///usr/local
 Extra Arguments=
 ProjectRootRelative=./
 

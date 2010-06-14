@@ -1,6 +1,6 @@
 #include "vclock.h"
 
-VClock::VClock(size_t n) /*: vector(n, 0)*/ {
+VClock::VClock(size_t n) : vector<usint>(n, 0) {
 }
 
 VClock::VClock(usint *buffer, size_t n) {

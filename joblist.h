@@ -23,7 +23,7 @@
 
 #include <vector>
 
-enum Instr {SET, GET, REGSET, INC, ADD, PRINT, WAIT};
+enum Instr {SET, GET, REGSET, INC, ADD, /*PRINT, */ WAIT};
 
 struct Oper {
 	Instr instr;
@@ -35,7 +35,9 @@ class JobList : public std::vector<Oper> {
 		/**
 		 * Metoda przepisująca bufor (adres) do wektora
 		 */
-		void assign(Oper *buffer, size_t n);
+		void fill(Oper *buffer, size_t n);
+
+		const Oper *data();
 };
 
 #endif // JOBLIST_H
