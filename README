@@ -1,0 +1,52 @@
+PL
+Opis:
+Każdy proces zarządza obiektem. Na obiekcie można wykonać następujące operacje:
+
+    * SET
+    * ADD
+    * INC
+
+Liczba obiektów i procesów jest znana z góry wszystkim procesom. Każdy proces zna z góry adresy wszystkich procesów, może także znać z góry który proces zarządza którym obiektem. Obiekty identyfikowane są liczbami.
+
+Każdy proces rozpoczyna wykonanie od wczytania pliku z pseudokodem. Każdy proces posiada jeden "rejestr" (zmienna). Pseudokod zawiera następujące operacje:
+
+    * SET obiekt - ustawia wartość obiektu na wartość zawartą w rejestrze
+    * GET obiekt - pobiera wartość obiektu i wpisuje w rejestr
+    * REGSET liczba - ustawia wartość rejestru na liczbę
+    * INC obiekt - zwiększa wartość obiektu o jeden
+    * ADD obiekt - dodaje do wartości obiektu wartość rejestru
+    * PRINT - wypisuje wartość rejestru oraz zarządzanego obiektu
+    * WAIT - czeka, aż wartość obiektu będzie równa wartości rejestru
+
+Po zakończeniu przetwarzania pliku z pseudokodem proces się kończy. Każdy proces może oczywiście mieć inny plik z pseudokodem. Plik ten może zawierać także polecenia dodatkowe, wg. uznania, jeżeli pomagają one w rozwiązaniu zadania.
+
+Zadanie
+Należy zapewnić zapisanie spójnego obrazu stanu globalnego. Z poziomu konsoli można uruchomić osobny program ( man pvm_tasks, może się przydać). uruchomienie tego programu powoduje, że zapisany jest spójny obraz stanu globalnego - osobny plik dla każdego procesu, zawierający stan jego obiektu oraz rejestru. Na podstawie tych zapisanych plików następnie mozna procesy ponownie uruchomić.
+
+Wymagania ogólne
+Każdy projekt powinien spełniać następujące wymagania:
+
+   1. Sprawozdanie, o przyzwoitej objętości oraz jakości. Sprawozdanie powinno zawierać
+          * opis projektu
+          * Opis rozwiązania
+          * Dyskusja złożoności komunikacyjnej i czasowej
+   2. W przypadku, gdy studenci dzielą się pracą, należy wskazać, które fragmenty projektu zostały wykonane przed kogo.
+   3. W przypadkach, gdzie zostało dozwolone współdzielenie kodu z innym projektem, należy to wskazać.
+   4. Nie wolno używać komunikacji grupowej do realizacji rozwiązania. Dopuszczalne jest użycie komunikacji grupowej w fazie inicjacji programu
+   5. Niedopuszczalne jest rozwiązanie z aktywnym czekaniem: tzn:
+
+
+      while (1) {
+        n = pvm_nrecv(-1,-1);
+
+        if (n > 0)
+          some_code();
+      }
+
+
+      Zamiast tego należy stosować pvm_trecv, jeżeli to konieczne.
+   6. Programy powinny być dobrze napisane. Wymóg ten oznacza, że za bałaganiarski kod, nieczytelny (np. "magic numbers", nazwy zmiennych bez sensu, brak sensownej struktury) mogą być odejmowane punkty.
+   7. Programy powinny być "gadatliwe" (verbose). To znaczy, powinna być dostępna opcja, w której każdy proces opisywałby, co robi. Każdy komunikat powinien być poprzedzony etykietą zegarową, by można je było posortować wg. czasu logicznego
+   8. Każdy proces utrzymuje zegar logiczny Lamporta. Każda wiadomość zawierać więc musi etykietę zegarową
+
+
