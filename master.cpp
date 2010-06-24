@@ -8,10 +8,16 @@
 #include <fstream>
 #include <sstream>
 
-#define FILE_NAME_BASE "proc"
+#include <pvm3.h>
+
+#define FILE_NAME_BASE "/home/inf85108/proc"
+#define SLAVENAME "slave"
 
 #include "joblist.h"
+#include "tids.h"
 
+using std::cout;
+using std::cin;
 using std::list;
 using std::string;
 using std::ifstream;
@@ -63,10 +69,16 @@ void parseFile(const string &filename, JobList &commands) {
 			newOper.instr = ADD;
 			newOper.arg = arg;
 		}
+		else if (strcmp(command, "PRINT") == 0) {
+			newOper.instr = PRINT;
+			newOper.arg = -1;
+		}
 		else if (strcmp(command, "WAIT") == 0) {
 			newOper.instr = WAIT;
 			newOper.arg = -1;
 		}
+		else
+			continue;
 
 
 		commandList.push_back(newOper);
@@ -78,33 +90,59 @@ void parseFile(const string &filename, JobList &commands) {
 	commands.assign(commandList.begin(), commandList.end());
 }
 
+void init(Tids &tids) {
+	std::ostringstream ss;
+
+	JobList proc;
+	int jobNum;
+	int slaveNum = tids.size();
+
+	for (int i = 0; i < slaveNum; ++i) {
+		ss << i;
+		parseFile(FILE_NAME_BASE + ss.str(), proc);
+
+		pvm_initsend(PvmDataDefault);
+		pvm_pkint(&i, 1, 1);
+
+		pvm_pkint(&slaveNum, 1, 1);
+		pvm_pkint(tids.data(), tids.size(), 1);
+
+		jobNum = proc.size();
+		pvm_pkint(&jobNum, 1, 1);
+		pvm_pkbyte((char *) proc.data(), sizeof(Oper) * proc.size(), 1);
+
+		pvm_send(tids[i], INIT);
+
+		ss.str("");
+	}
+}
+
 int main(int argc, char *argv[]) {
-	if (argc != 1) {
+	if (argc != 2) {
 		printf("Usage: %s <numb of slave>", argv[0]);
 		exit(1);
 	}
 
-	int slaveNo = atoi(argv[1]);
-	std::ostringstream ss;
-	const string baseFileName(FILE_NAME_BASE);
+	int slaveNum = atoi(argv[1]);
 
-	JobList proc;
+	Tids tids(slaveNum);
+	pvm_spawn(SLAVENAME, NULL, PvmTaskDefault, "", tids.size(), tids.data());
 
-	for (int j = 0; j < slaveNo; ++j) {
-		ss << j;
-		parseFile(baseFileName + ss.str(), proc);
+	init(tids);
 
-		for (int i = 0; i < proc.size(); ++i) {
-			printf("Proc nr %d, Instr nr %d: %d", j, i + 1, proc[i].instr);
+	string line;
 
-			if (proc[i].instr != WAIT)
-				printf(" %d", proc[i].arg);
+	while (1) {
+		cin >> line;
 
-			printf("\n");
+		if (line == "start") {
+			char resume = 0;
+			pvm_initsend(PvmDataDefault);
+			pvm_pkbyte(&resume, 1, 1);
+			pvm_mcast(tids.data(), tids.size(), RESUME);
 		}
-
-		ss.clear();
 	}
 
+	pvm_exit();
 	return 0;
 }

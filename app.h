@@ -21,18 +21,25 @@
 #ifndef APP_H
 #define APP_H
 
+#include <cstdio>
+#include <list>
 #include "joblist.h"
+
+using std::printf;
+using std::list;
 
 enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
 
 class App {
 	public:
-		App(int procNo, Oper *jobList, size_t jobNo);
+ 		App(int procNo, const JobList &jobList);
+		virtual ~App();
 
 		virtual void run() = 0;
-		virtual void send(Instr instr, int arg, int objNo) = 0;
+		virtual void resume(const int savedState, list<Msg> &msgSaved) = 0;
 
 	protected:
+		virtual void send(Instr instr, int arg, int objNum) = 0;
 		/**
 		 * Metoda uruchamia aplikacje
 		 * @param amount ile iteracji ma wykonać aplikacja
@@ -42,11 +49,11 @@ class App {
 		bool done;
 		int reg;
 		int obj;
-		int instrNo;
 		int procNo;
 
 		WaitFor halt;
-		const JobList jobList;
+		const JobList &jobList;
+		int instrNo;
 };
 
 #endif // APP_H

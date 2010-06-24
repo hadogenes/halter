@@ -20,8 +20,10 @@
 
 #include "tids.h"
 
-Tids::Tids(int* buffer, size_t n) {
-	this->fill(buffer, n);
+Tids::Tids() {
+}
+
+Tids::Tids(size_t n): vector<int>(n, 0) {
 }
 
 
@@ -33,6 +35,6 @@ void Tids::fill(int* buffer, size_t n) {
 	this->_M_impl._M_end_of_storage = this->_M_impl._M_finish;
 }
 
-const int *Tids::data() {
+int *Tids::data() {
 	return this->_M_impl._M_start;
 }

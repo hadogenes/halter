@@ -23,17 +23,19 @@
 
 #include <vector>
 
+using std::vector;
 
-class Tids : public std::vector<int> {
+class Tids : public vector<int> {
 	public:
-		Tids(int *buffer, size_t n);
+		Tids();
+		Tids(size_t n);
 
 		/**
 		 * Metoda przepisująca bufor (adres) do wektora
 		 */
 		void fill(int *buffer, size_t n);
 
-		const int *data();
+		int *data();
 };
 
 #endif // TIDS_H

@@ -20,93 +20,158 @@
 
 #include "monitor.h"
 
-Monitor::Monitor(int procNo, Oper *jobList, size_t jobNo, int *tids, usint slaveNum) : App(procNo, jobList, jobNo), tids(tids, slaveNum + 1), vClock(slaveNum + 1), vRecordClock(slaveNum + 1) {
-	this->recorded = false;
+Monitor::Monitor(int procNo, const JobList &jobList, const Tids &tids) : App(procNo, jobList),
+		tids(tids), recvMark(tids.size(), false) {
+	this->involved = false;
 }
 
 void Monitor::send(Instr instr, int arg, int objNo) {
-	Oper outMsg = { instr, arg };
-	++this->vClock[this->procNo];
+	Msg outMsg = { this->procNo, { instr, arg } };
+// 	++this->vClock[this->procNo];
 
 	pvm_initsend(PvmDataDefault);
-	pvm_pkushort(this->vClock.data(), this->vClock.size(), 1);
-	pvm_pkint(&this->procNo, 1, 1);
+// 	pvm_pkushort(this->vClock.data(), this->vClock.size(), 1);
+// 	pvm_pkint(&this->procNo, 1, 1);
 
 	pvm_pkbyte((char *) &outMsg, sizeof(outMsg), 1);
 
-	pvm_send(this->tids[objNo], 1);
+	pvm_send(this->tids[objNo], NORMAL);
 
-	if (outMsg.instr == GET)
+	if (instr == GET)
 		this->halt = WAIT_GET;
 }
 
 void Monitor::receive() {
-	VClock inClk(this->vClock.size());
+// 	VClock inClk(this->vClock.size());
 	int who;
-	Oper inMsg;
+	Msg inMsg;
 
 	do {
-		pvm_recv(-1, -1);
-		pvm_upkushort(inClk.data(), inClk.size(), 1);
-		this->vClock.concat(inClk);
-
-		pvm_upkint(&who, 1, 1);
+		pvm_recv(-1, NORMAL);
 
 		pvm_upkbyte((char *) &inMsg, sizeof(inMsg), 1);
 
-		switch (inMsg.instr) {
-			case SET:
-				this->obj = inMsg.arg;
+		this->msgBuf.push_back(inMsg);
+	}
+	while (pvm_probe(-1, NORMAL) > 0);
+}
 
-				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
-					this->halt = WAIT_NONE;
+void Monitor::recordState(int init) {
+	this->involved = true;
 
-				break;
+	for (int i = 0; i < this->recvMark.size(); ++i)
+		this->recvMark[i] = false;
 
-			case GET:
-				this->send(GET_RESP, this->obj, who);
-				break;
+	this->recvMark[this->procNo] = true;
 
-			case INC:
-				++this->obj;
+	this->procState = this->instrNo;
+	this->initializer = init;
 
-				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
-					this->halt = WAIT_NONE;
+	for (int i = 0; i < this->tids.size(); ++i)
+		if (i != this->procNo)
+			this->send(MARKER, init, i);
+}
 
-				break;
+void Monitor::sendState() {
+	list<Msg>::iterator it;
+	int msgNum = this->chanState.size();
 
-			case ADD:
-				this->obj += inMsg.arg;
+	pvm_initsend(PvmDataDefault);
+	pvm_pkint(&this->procNo, 1, 1);
 
-				if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
-					this->halt = WAIT_NONE;
+	pvm_pkint(&msgNum, 1, 1);
 
-				break;
+	for (it = this->chanState.begin(); it != this->chanState.end(); ++it)
+		pvm_pkbyte((char *) &(*it), sizeof(Msg), 1);
 
-			case GET_RESP:
-				this->reg = inMsg.arg;
-				this->halt = WAIT_NONE;
-				break;
+	pvm_send(this->initializer, STATE);
 
-			default:
-				break;
-		}
+	this->involved = false;
+}
 
-	} while (pvm_probe(-1, -1) > 0);
+void Monitor::resume(const int savedState, list<Msg> &msgSaved) {
+	this->instrNo = savedState;
+	this->msgBuf.swap(msgSaved);
 }
 
 
 void Monitor::run() {
 	while (1) {
+		// runRemote wykonuje wszystko co jest w buforze lokalnym - nie odbiera wiadomości
+		// Potrzebne do wznawiania
+		if (this->msgBuf.size() > 0)
+			this->runRemote();
+
 		if ((!this->done) && (this->halt == WAIT_NONE)) {
 			this->runLocal(MAX_ITER);
 
-			if (pvm_probe(-1, -1) <= 0)
+			if (pvm_probe(-1, NORMAL) == 0)
 				continue;
 		}
 
 		this->receive();
 	}
 }
+
+bool Monitor::isAllChanDone() {
+	for (int i = 0; i < this->recvMark.size(); ++i)
+		if (!this->recvMark[i])
+			return false;
+
+	return true;
+}
+
+
+void Monitor::runRemote() {
+	list<Msg>::iterator it = this->msgBuf.begin();
+
+	for (; it != this->msgBuf.end(); ++it) {
+		switch ((*it).oper.instr) {
+			case SET:
+				this->obj = (*it).oper.arg;
+				break;
+
+			case GET:
+				this->send(GET_RESP, this->obj, (*it).who);
+				break;
+
+			case INC:
+				++this->obj;
+				break;
+
+			case ADD:
+				this->obj += (*it).oper.arg;
+				break;
+
+			case GET_RESP:
+				this->reg = (*it).oper.arg;
+				this->halt = WAIT_NONE;
+				break;
+
+			case MARKER:
+				if (!this->involved)
+					this->recordState((*it).oper.arg);
+
+				if ((*it).who != -1)
+					this->recvMark[(*it).who] = true;
+
+				if (this->isAllChanDone())
+					this->sendState();
+
+				break;
+
+			default:
+				break;
+		}
+
+		if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
+			this->halt = WAIT_NONE;
+
+		if ((this->involved) && ((*it).who != -1))
+			if (!this->recvMark[(*it).who])
+				this->chanState.push_back(*it);
+	}
+}
+
 
 

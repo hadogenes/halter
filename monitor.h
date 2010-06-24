@@ -26,22 +26,39 @@
 #include "vclock.h"
 #include "app.h"
 #include "tids.h"
+#include <vector>
+#include <list>
 #include <pvm3.h>
+
+using std::vector;
+using std::list;
 
 class Monitor : public App {
 	public:
-		Monitor(int procNo, Oper* jobList, size_t jobNo, int* tids, usint slaveNum);
+		Monitor(int procNo, const JobList &jobList, const Tids &tids);
 
 		void run();
-		void send(Instr instr, int arg, int objNo);
+		void resume(const int savedState, list<Msg> &msgSaved);
 
 	private:
+		void runRemote();
+
+		void send(Instr instr, int arg, int objNo);
+		void sendState();
 		void receive();
 
-		const Tids tids;
-		VClock vClock;
-		VClock vRecordClock;
-		bool recorded;
+		bool isAllChanDone();
+		void recordState(int init);
+
+		const Tids &tids;
+
+		list<Msg> msgBuf;
+
+		vector<bool> recvMark;
+		list<Msg> chanState;
+		bool involved;
+		int procState;
+		int initializer;
 
 };
 
