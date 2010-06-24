@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
 
 	App *app = NULL;
 
+	pvm_recv(-1, INIT);
 	pvm_upkint(&procNo, 1, 1);
 	pvm_upkint(&slaveNum, 1, 1);
 
