@@ -14,14 +14,15 @@ using std::list;
 
 int main(int argc, char *argv[]) {
 	char resume;
-	int procNo, slaveNum, jobNum, savedState, msgNum;
+	int procNo, slaveNum, jobNum, msgNum, savedInstrState;
+	WaitFor savedHaltState;
 	Tids tids;
 	JobList jobList;
 	list<Msg> msgSaved;
 
 	App *app = NULL;
 
-	pvm_recv(-1, INIT);
+	pvm_recv(pvm_parent(), INIT);
 	pvm_upkint(&procNo, 1, 1);
 	pvm_upkint(&slaveNum, 1, 1);
 
@@ -34,12 +35,14 @@ int main(int argc, char *argv[]) {
 	pvm_upkbyte((char *) jobList.data(), sizeof(Oper) * jobList.size(), 1);
 
 
-	pvm_recv(-1, RESUME);
+	pvm_recv(pvm_parent(), RESUME);
 	pvm_upkbyte(&resume, 1, 1);
 
 	if (resume) {
 		Msg newMsg;
-		pvm_upkint(&savedState, 1, 1);
+		pvm_upkint(&savedInstrState, 1, 1);
+		pvm_upkbyte((char *) &savedHaltState, sizeof(savedHaltState), 1);
+
 		pvm_upkint(&msgNum, 1, 1);
 
 		for (int i = 0; i < msgNum; ++i) {
@@ -51,7 +54,7 @@ int main(int argc, char *argv[]) {
 	app = new Monitor(procNo, jobList, tids);
 
 	if (resume)
-		app->resume(savedState, msgSaved);
+		app->resume(savedInstrState, savedHaltState, msgSaved);
 
 	app->run();
 

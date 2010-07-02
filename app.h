@@ -28,15 +28,13 @@
 using std::printf;
 using std::list;
 
-enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
-
 class App {
 	public:
  		App(int procNo, const JobList &jobList);
 		virtual ~App();
 
 		virtual void run() = 0;
-		virtual void resume(const int savedState, list<Msg> &msgSaved) = 0;
+		virtual void resume(const int savedState, const WaitFor savedHaltState, list<Msg> &msgSaved) = 0;
 
 	protected:
 		virtual void send(Instr instr, int arg, int objNum) = 0;

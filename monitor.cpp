@@ -62,9 +62,11 @@ void Monitor::recordState(int init) {
 	for (int i = 0; i < this->recvMark.size(); ++i)
 		this->recvMark[i] = false;
 
+	// Oznaczamy, że od "siebie" odebraliśmy już wiadomość
 	this->recvMark[this->procNo] = true;
 
-	this->procState = this->instrNo;
+	this->procInstrState = this->instrNo;
+	this->procHaltState = this->halt;
 	this->initializer = init;
 
 	for (int i = 0; i < this->tids.size(); ++i)
@@ -79,6 +81,11 @@ void Monitor::sendState() {
 	pvm_initsend(PvmDataDefault);
 	pvm_pkint(&this->procNo, 1, 1);
 
+	// Zapamiętanie stanu procesu
+	pvm_pkint(&this->procInstrState, 1, 1);
+	pvm_pkbyte((char *) &this->procHaltState, sizeof(this->procHaltState), 1);
+
+	// Zapamiętanie stanu wiadomości
 	pvm_pkint(&msgNum, 1, 1);
 
 	for (it = this->chanState.begin(); it != this->chanState.end(); ++it)
@@ -86,11 +93,17 @@ void Monitor::sendState() {
 
 	pvm_send(this->initializer, STATE);
 
+	// Po wysłaniu wracamy do normalnej pracy
 	this->involved = false;
+	this->chanState.clear();
 }
 
-void Monitor::resume(const int savedState, list<Msg> &msgSaved) {
-	this->instrNo = savedState;
+void Monitor::resume(const int savedInstrState, const WaitFor savedHaltState, list<Msg> &msgSaved) {
+	// Oddtwarzanie stau systemu
+	this->instrNo = savedInstrState;
+	this->halt = savedHaltState;
+
+	// Odtwarzanie stanu wiadomości
 	this->msgBuf.swap(msgSaved);
 }
 
@@ -98,7 +111,7 @@ void Monitor::resume(const int savedState, list<Msg> &msgSaved) {
 void Monitor::run() {
 	while (1) {
 		// runRemote wykonuje wszystko co jest w buforze lokalnym - nie odbiera wiadomości
-		// Potrzebne do wznawiania
+		// Potrzebne do wznawiania - standardowo bufor jest pusty
 		if (this->msgBuf.size() > 0)
 			this->runRemote();
 
