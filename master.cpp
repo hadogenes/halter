@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdio>
 #include <cstdlib>
 #include <list>
@@ -6,16 +7,20 @@
 
 #include <fstream>
 #include <sstream>
+
+#include <pvm3.h>
+
+#define FILE_NAME_BASE "/home/inf85108/proc"
+#define SLAVENAME "slave"
+
+#include "joblist.h"
+#include "tids.h"
+
+using std::cout;
+using std::cin;
 using std::list;
 using std::string;
 using std::ifstream;
-
-#include <pvm3.h>
-#include "joblist.h"
-#include "init.h"
-
-#define FILE_NAME_BASE "/home/C/Studia/PR/halter/proc"
-//#define FILE_NAME_BASE "/home/C/Studia/PR/halter/proc"
 
 void parseFile(const string &filename, JobList &commands) {
 	ifstream file(filename.c_str());
@@ -23,7 +28,7 @@ void parseFile(const string &filename, JobList &commands) {
 	Oper newOper;
 
 	string line;
-	unsigned space;
+	int space;
 	char command[10];
 	int arg;
 
@@ -110,4 +115,34 @@ void init(Tids &tids) {
 
 		ss.str("");
 	}
+}
+
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("Usage: %s <numb of slave>", argv[0]);
+		exit(1);
+	}
+
+	int slaveNum = atoi(argv[1]);
+
+	Tids tids(slaveNum);
+	pvm_spawn(SLAVENAME, NULL, PvmTaskDefault, "", tids.size(), tids.data());
+
+	init(tids);
+
+	string line;
+
+	while (1) {
+		cin >> line;
+
+		if (line == "start") {
+			char resume = 0;
+			pvm_initsend(PvmDataDefault);
+			pvm_pkbyte(&resume, 1, 1);
+			pvm_mcast(tids.data(), tids.size(), RESUME);
+		}
+	}
+
+	pvm_exit();
+	return 0;
 }

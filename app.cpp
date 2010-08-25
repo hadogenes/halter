@@ -19,6 +19,7 @@
 */
 
 #include "app.h"
+#include <unistd.h>
 
 App::App(int procNo, const JobList& jobList) : procNo(procNo), jobList(jobList) {
 	this->done = false;
@@ -76,6 +77,8 @@ void App::runLocal(const int amount) {
 		}
 		else
 			this->send(currOper.instr, this->reg, currOper.arg);
+
+		usleep(1000000);
 	}
 
 

@@ -20,6 +20,8 @@
 
 #include "monitor.h"
 
+#define PROG_NAME "slave"
+
 Monitor::Monitor(int procNo, const JobList &jobList, const Tids &tids) : App(procNo, jobList),
 		tids(tids), recvMark(tids.size(), false) {
 	this->involved = false;
@@ -57,6 +59,10 @@ void Monitor::receive() {
 }
 
 void Monitor::recordState(int init) {
+#ifdef DEBUG
+				printf("Recording state (%x)\n", this->procNo);
+				fflush(stdout);
+#endif
 	this->involved = true;
 
 	for (int i = 0; i < this->recvMark.size(); ++i)
@@ -75,6 +81,10 @@ void Monitor::recordState(int init) {
 }
 
 void Monitor::sendState() {
+#ifdef DEBUG
+				printf("Sending state (%x)\n", this->procNo);
+				fflush(stdout);
+#endif
 	list<Msg>::iterator it;
 	int msgNum = this->chanState.size();
 
@@ -105,6 +115,11 @@ void Monitor::resume(const int savedInstrState, const WaitFor savedHaltState, li
 
 	// Odtwarzanie stanu wiadomości
 	this->msgBuf.swap(msgSaved);
+
+#ifdef DEBUG
+		printf("%s[%d]: resumed slave\n", PROG_NAME, this->procNo);
+		fflush(stdout);
+#endif
 }
 
 
@@ -138,7 +153,7 @@ bool Monitor::isAllChanDone() {
 void Monitor::runRemote() {
 	list<Msg>::iterator it = this->msgBuf.begin();
 
-	for (; it != this->msgBuf.end(); ++it) {
+	for (; it != this->msgBuf.end(); it = this->msgBuf.erase(it)) {
 		switch ((*it).oper.instr) {
 			case SET:
 				this->obj = (*it).oper.arg;
@@ -162,6 +177,10 @@ void Monitor::runRemote() {
 				break;
 
 			case MARKER:
+#ifdef DEBUG
+				printf("Recive marker from %x\n", (*it).who);
+				fflush(stdout);
+#endif
 				if (!this->involved)
 					this->recordState((*it).oper.arg);
 

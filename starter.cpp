@@ -2,8 +2,6 @@
 #include <cstdlib>
 #include <pvm3.h>
 
-#define SLAVENAME "slave"
-
 #include <pvm3.h>
 #include "joblist.h"
 #include "init.h"

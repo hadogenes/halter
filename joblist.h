@@ -21,6 +21,8 @@
 #ifndef JOBLIST_H
 #define JOBLIST_H
 
+#define SLAVENAME "slave"
+
 #include <vector>
 
 enum Instr { SET = 0x1, GET = 0x2, REGSET = 0x4, INC = 0x8, ADD = 0x10, PRINT = 0x20, WAIT = 0x40, GET_RESP = 0x80, MARKER = 0x100 };

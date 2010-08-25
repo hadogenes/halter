@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<halter num="2">
+    <slave id="1">
+        <procState>5</procState>
+        <haltState>2</haltState>
+        <chanState num="0" />
+    </slave>
+    <slave id="0">
+        <procState>5</procState>
+        <haltState>0</haltState>
+        <chanState num="0" />
+    </slave>
+</halter>

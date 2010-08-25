@@ -21,7 +21,7 @@
 #ifndef MONITOR_H
 #define MONITOR_H
 
-#define MAX_ITER 10
+#define MAX_ITER 1
 
 #include "vclock.h"
 #include "app.h"
