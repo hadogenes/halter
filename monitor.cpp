@@ -22,30 +22,28 @@
 
 #define PROG_NAME "slave"
 
-Monitor::Monitor(int procNo, const JobList &jobList, const Tids &tids) : App(procNo, jobList),
+Monitor::Monitor(uint procNo, const JobList& jobList, const Tids& tids) : App(procNo, jobList),
 		tids(tids), recvMark(tids.size(), false) {
 	this->involved = false;
+	this->lamport = 0;
 }
 
 void Monitor::send(Instr instr, int arg, int objNo) {
-	Msg outMsg = { this->procNo, { instr, arg } };
-// 	++this->vClock[this->procNo];
+	Msg outMsg = { this->procNo, this->lamport, { instr, arg } };
 
 	pvm_initsend(PvmDataDefault);
-// 	pvm_pkushort(this->vClock.data(), this->vClock.size(), 1);
-// 	pvm_pkint(&this->procNo, 1, 1);
 
 	pvm_pkbyte((char *) &outMsg, sizeof(outMsg), 1);
 
 	pvm_send(this->tids[objNo], NORMAL);
 
-	if (instr == GET)
-		this->halt = WAIT_GET;
+	if (instr == GET) {
+		PRINT_VERBOSE(this->procNo, this->lamport, "halt", (int) WAIT_GET);
+		this->halt |= WAIT_GET;
+	}
 }
 
 void Monitor::receive() {
-// 	VClock inClk(this->vClock.size());
-	int who;
 	Msg inMsg;
 
 	do {
@@ -59,13 +57,11 @@ void Monitor::receive() {
 }
 
 void Monitor::recordState(int init) {
-#ifdef DEBUG
-				printf("Recording state (%x)\n", this->procNo);
-				fflush(stdout);
-#endif
+	PRINT_VERBOSE(this->procNo, this->lamport, "Recording state");
+
 	this->involved = true;
 
-	for (int i = 0; i < this->recvMark.size(); ++i)
+	for (uint i = 0; i < this->recvMark.size(); ++i)
 		this->recvMark[i] = false;
 
 	// Oznaczamy, że od "siebie" odebraliśmy już wiadomość
@@ -73,27 +69,27 @@ void Monitor::recordState(int init) {
 
 	this->procInstrState = this->instrNo;
 	this->procHaltState = this->halt;
+	this->procLamportState = this->lamport;
 	this->initializer = init;
 
-	for (int i = 0; i < this->tids.size(); ++i)
+	for (uint i = 0; i < this->tids.size(); ++i)
 		if (i != this->procNo)
 			this->send(MARKER, init, i);
 }
 
 void Monitor::sendState() {
-#ifdef DEBUG
-				printf("Sending state (%x)\n", this->procNo);
-				fflush(stdout);
-#endif
+	PRINT_VERBOSE(this->procNo, this->lamport, "Sending state");
+
 	list<Msg>::iterator it;
 	int msgNum = this->chanState.size();
 
 	pvm_initsend(PvmDataDefault);
-	pvm_pkint(&this->procNo, 1, 1);
+	pvm_pkuint(&this->procNo, 1, 1);
 
 	// Zapamiętanie stanu procesu
 	pvm_pkint(&this->procInstrState, 1, 1);
 	pvm_pkbyte((char *) &this->procHaltState, sizeof(this->procHaltState), 1);
+	pvm_pkuint(&this->procLamportState, 1, 1);
 
 	// Zapamiętanie stanu wiadomości
 	pvm_pkint(&msgNum, 1, 1);
@@ -108,18 +104,16 @@ void Monitor::sendState() {
 	this->chanState.clear();
 }
 
-void Monitor::resume(const int savedInstrState, const WaitFor savedHaltState, list<Msg> &msgSaved) {
+void Monitor::resume(const int savedInstrState, const WaitFor savedHaltState, const uint savedLamport, list<Msg> &msgSaved) {
 	// Oddtwarzanie stau systemu
 	this->instrNo = savedInstrState;
 	this->halt = savedHaltState;
+	this->lamport = savedLamport;
 
 	// Odtwarzanie stanu wiadomości
 	this->msgBuf.swap(msgSaved);
 
-#ifdef DEBUG
-		printf("%s[%d]: resumed slave\n", PROG_NAME, this->procNo);
-		fflush(stdout);
-#endif
+	PRINT_VERBOSE(this->procNo, this->lamport, "resumed slave");
 }
 
 
@@ -142,7 +136,7 @@ void Monitor::run() {
 }
 
 bool Monitor::isAllChanDone() {
-	for (int i = 0; i < this->recvMark.size(); ++i)
+	for (uint i = 0; i < this->recvMark.size(); ++i)
 		if (!this->recvMark[i])
 			return false;
 
@@ -154,37 +148,43 @@ void Monitor::runRemote() {
 	list<Msg>::iterator it = this->msgBuf.begin();
 
 	for (; it != this->msgBuf.end(); it = this->msgBuf.erase(it)) {
+		this->lamport = std::max(this->lamport, (*it).laport);
+
 		switch ((*it).oper.instr) {
 			case SET:
+				PRINT_VERBOSE(this->procNo, this->lamport, "SET", (*it).who, (*it).oper.arg);
 				this->obj = (*it).oper.arg;
 				break;
 
 			case GET:
+				PRINT_VERBOSE(this->procNo, this->lamport, "GET", (*it).who, (*it).oper.arg);
+				++this->lamport;
 				this->send(GET_RESP, this->obj, (*it).who);
 				break;
 
 			case INC:
+				PRINT_VERBOSE(this->procNo, this->lamport, "INC", (*it).who);
 				++this->obj;
 				break;
 
 			case ADD:
+				PRINT_VERBOSE(this->procNo, this->lamport, "ADD", (*it).who, (*it).oper.arg);
 				this->obj += (*it).oper.arg;
 				break;
 
 			case GET_RESP:
+				PRINT_VERBOSE(this->procNo, this->lamport, "GET_RESP", (*it).who, (*it).oper.arg);
+				PRINT_VERBOSE(this->procNo, this->lamport, "unhalt", (int) WAIT_GET);
 				this->reg = (*it).oper.arg;
-				this->halt = WAIT_NONE;
+				this->halt &= ~WAIT_GET;
 				break;
 
 			case MARKER:
-#ifdef DEBUG
-				printf("Recive marker from %x\n", (*it).who);
-				fflush(stdout);
-#endif
+				PRINT_VERBOSE(this->procNo, this->lamport, "Recive marker", (*it).who);
 				if (!this->involved)
 					this->recordState((*it).oper.arg);
 
-				if ((*it).who != -1)
+				if ((*it).who != (uint) -1)
 					this->recvMark[(*it).who] = true;
 
 				if (this->isAllChanDone())
@@ -196,10 +196,12 @@ void Monitor::runRemote() {
 				break;
 		}
 
-		if ((this->halt == WAIT_VAL) && (this->obj == this->reg))
-			this->halt = WAIT_NONE;
+		if ((this->halt & WAIT_VAL) && (this->obj == this->reg)) {
+			PRINT_VERBOSE(this->procNo, this->lamport, "unhalt", (int) WAIT_VAL);
+			this->halt &= ~WAIT_VAL;
+		}
 
-		if ((this->involved) && ((*it).who != -1))
+		if ((this->involved) && ((*it).who != (uint) -1))
 			if (!this->recvMark[(*it).who])
 				this->chanState.push_back(*it);
 	}

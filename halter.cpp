@@ -13,23 +13,27 @@
 
 inline void saveMsg(const Msg &currMsg, ticpp::Element *parent) {
 		ticpp::Element* xmlMsgWho = new ticpp::Element("who");
+		ticpp::Element* xmlMsgLamport = new ticpp::Element("lamport");
 		ticpp::Element* xmlMsgInstr = new ticpp::Element("instr");
 		ticpp::Element* xmlMsgArg = new ticpp::Element("arg");
 
 		xmlMsgWho->SetText(currMsg.who);
+		xmlMsgLamport->SetText(currMsg.laport);
 		xmlMsgInstr->SetText((int) currMsg.oper.instr);
 		xmlMsgArg->SetText(currMsg.oper.arg);
 
 		parent->LinkEndChild(xmlMsgWho);
+		parent->LinkEndChild(xmlMsgLamport);
 		parent->LinkEndChild(xmlMsgInstr);
 		parent->LinkEndChild(xmlMsgArg);
 }
 
 inline void saveState(int ntask, ticpp::Element *xmlRoot) {
-	int who, procState, msgNum;
-	WaitFor haltState;
+	uint who, lamport;
+	int procState, msgNum;
+	char haltState;
 	Msg currMsg;
-	ticpp::Element *xmlSlave, *xmlProcState, *xmlHaltState, *xmlChanState;
+	ticpp::Element *xmlSlave, *xmlProcState, *xmlProcLamport, *xmlHaltState, *xmlChanState;
 
 #ifdef DEBUG
 	printf("%s: in func saveState\n", PROG_NAME);
@@ -38,9 +42,10 @@ inline void saveState(int ntask, ticpp::Element *xmlRoot) {
 
 	for (; ntask > 0; --ntask) {
 		pvm_recv(-1, STATE);
-		pvm_upkint(&who, 1, 1);
+		pvm_upkuint(&who, 1, 1);
 		pvm_upkint(&procState, 1, 1);
-		pvm_upkbyte((char *) &haltState, sizeof(WaitFor), 1);
+		pvm_upkbyte(&haltState, 1, 1);
+		pvm_upkuint(&lamport, 1, 1);
 
 #ifdef DEBUG
 	printf("%s: recived from, id: %d\n", PROG_NAME, who);
@@ -50,13 +55,16 @@ inline void saveState(int ntask, ticpp::Element *xmlRoot) {
 		// Allokowanie pamięci do nowego węzła
 		xmlSlave = new ticpp::Element("slave");
 		xmlProcState = new ticpp::Element("procState");
+		xmlProcLamport = new ticpp::Element("lamport");
 		xmlHaltState = new ticpp::Element("haltState");
 		xmlChanState = new ticpp::Element("chanState");
 
 		xmlSlave->SetAttribute("id", who);
 
 		xmlProcState->SetText(procState);
-		xmlHaltState->SetText(haltState);
+		xmlHaltState->SetText((int) haltState);
+		xmlProcLamport->SetText(lamport);
+		xmlSlave->LinkEndChild(xmlProcLamport);
 		xmlSlave->LinkEndChild(xmlProcState);
 		xmlSlave->LinkEndChild(xmlHaltState);
 
@@ -97,7 +105,7 @@ int main(int argc, char *argv[]) {
 	// proces "halter" nie ma być brany pod uwagę
 	ntask = tids.size();
 
-	Msg haltMsg = { -1, { MARKER, pvm_mytid() } };
+	Msg haltMsg = { -1, 1, { MARKER, pvm_mytid() } };
 	pvm_initsend(PvmDataDefault);
 	pvm_pkbyte((char *) &haltMsg, sizeof(haltMsg), 1);
 	pvm_mcast(tids.data(), tids.size(), NORMAL);
@@ -114,17 +122,7 @@ int main(int argc, char *argv[]) {
 	ticpp::Element *xmlRoot = new ticpp::Element("halter");
 	xmlRoot->SetAttribute("num", ntask);
 
-#ifdef DEBUG
-	printf("%s: saving to file (slave: %d)\n", PROG_NAME, ntask);
-	fflush(stdout);
-#endif
-
 	saveState(ntask, xmlRoot);
-
-#ifdef DEBUG
-	printf("%s: saving to file v2\n", PROG_NAME);
-	fflush(stdout);
-#endif
 
 	xmlHalter.LinkEndChild(xmlRoot);
 	xmlHalter.SaveFile(/*argc == 2 ? argv[1] :*/ DEFAULT_NAME);

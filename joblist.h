@@ -25,9 +25,11 @@
 
 #include <vector>
 
+typedef unsigned int uint;
+
 enum Instr { SET = 0x1, GET = 0x2, REGSET = 0x4, INC = 0x8, ADD = 0x10, PRINT = 0x20, WAIT = 0x40, GET_RESP = 0x80, MARKER = 0x100 };
 enum MsgId { INIT = 0x1, RESUME = 0x2, NORMAL = 0x4, STATE = 0x8 };
-enum WaitFor { WAIT_NONE, WAIT_GET, WAIT_VAL };
+enum WaitFor { WAIT_NONE = 0, WAIT_GET = 0x1, WAIT_VAL = 0x2 };
 
 struct Oper {
 	Instr instr;
@@ -35,7 +37,8 @@ struct Oper {
 };
 
 struct Msg {
-	int who;
+	uint who;
+	uint laport;
 	Oper oper;
 };
 

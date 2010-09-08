@@ -21,51 +21,59 @@
 #include "app.h"
 #include <unistd.h>
 
-App::App(int procNo, const JobList& jobList) : procNo(procNo), jobList(jobList) {
+App::App(uint procNo, const JobList& jobList) : procNo(procNo), jobList(jobList) {
 	this->done = false;
 	this->reg = 0;
 	this->obj = 0;
 	this->instrNo = 0;
 	this->halt = WAIT_NONE;
 
-#ifdef DEBUG
-	printf("App::App(%d): End init\n", this->procNo);
-	fflush(stdout);
-#endif // DEBUG
+	PRINT_VERBOSE(this->procNo, this->lamport, "end init");
 }
 
 App::~App() {
-
 }
 
 
-void App::runLocal(const int amount) {
-	for (int i = 0; (i < amount) && (this->instrNo < this->jobList.size()) && (this->halt == WAIT_NONE); ++i, ++this->instrNo) {
+uint App::runLocal(const uint amount) {
+	uint i = 0;
+	for (; (i < amount) && (this->instrNo < this->jobList.size()) && (this->halt == WAIT_NONE); ++i, ++this->instrNo, ++this->lamport) {
 		const Oper &currOper = this->jobList[this->instrNo];
 
-		if ((currOper.instr & (REGSET | PRINT | WAIT)) || (currOper.arg == this->procNo)) {
+		if ((currOper.instr & (REGSET | PRINT | WAIT)) || (currOper.arg == (int) this->procNo)) {
 			switch (currOper.instr) {
 				case SET:
+					PRINT_VERBOSE(this->procNo, this->lamport, "SET");
 					this->obj = this->reg;
 					break;
 				case GET:
+					PRINT_VERBOSE(this->procNo, this->lamport, "GET");
 					this->reg = this->obj;
 					break;
 				case REGSET:
+					PRINT_VERBOSE(this->procNo, this->lamport, "REGSET", currOper.arg);
 					this->reg = currOper.arg;
 					break;
 				case INC:
+					PRINT_VERBOSE(this->procNo, this->lamport, "INC");
 					++this->obj;
 					break;
 				case ADD:
+					PRINT_VERBOSE(this->procNo, this->lamport, "ADD", this->reg);
 					this->obj += this->reg;
 					break;
 				case PRINT:
-					printf("Id[%d]: obj: %d, reg: %d\n", this->procNo, this->obj, this->reg);
+					printf("%s[%d]: obj: %d, reg: %d\n", PROG_NAME, this->procNo, this->obj, this->reg);
 					fflush(stdout);
 					break;
 				case WAIT:
-					this->halt = WAIT_VAL;
+					PRINT_VERBOSE(this->procNo, this->lamport, "WAIT", this->reg);
+
+					if (this->obj != this->reg) {
+						PRINT_VERBOSE(this->procNo, this->lamport, "halt", (int) WAIT_VAL);
+						this->halt |= WAIT_VAL;
+					}
+
 					break;
 				default:
 #ifdef DEBUG
@@ -85,10 +93,9 @@ void App::runLocal(const int amount) {
 	// Jeśli przetwarzanie już się zakończyło i na nic nie czekamy, to zaznacz to
 	if ((this->instrNo >= this->jobList.size()) && (this->halt == WAIT_NONE)) {
 		this->done = true;
-#ifdef DEBUG
-		printf("App::runLocal(%d): done\n", this->procNo);
-		fflush(stdout);
-#endif // DEBUG
+		PRINT_VERBOSE(this->procNo, this->lamport, "done");
 	}
+
+	return i;
 }
 

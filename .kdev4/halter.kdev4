@@ -12,30 +12,7 @@ Extra Arguments=
 ProjectRootRelative=./
 
 [Launch]
-Launch Configurations=Launch Configuration 0
-
-[Launch][Launch Configuration 0]
-Configured Launch Modes=execute
-Configured Launchers=nativeAppLauncher
-Name=Run
-Type=Native Application
-
-[Launch][Launch Configuration 0][Data]
-Arguments=
-Debugger Shell=file:///usr/bin/gdbtui
-Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
-Dependency Action=Build
-Display Demangle Names=true
-Display Static Members=false
-EnvironmentGroup=default
-GDB Path=file:///usr/bin/gdb
-Project Target=halter,master
-Remote GDB Config Script=
-Remote GDB Run Script=
-Remote GDB Shell Script=
-Try Setting Breakpoints On Loading Libraries=true
-Working Directory=file:///home/C/Studia/PR/halter
-isExecutable=false
+Launch Configurations=
 
 [MakeBuilder]
 Number Of Jobs=1

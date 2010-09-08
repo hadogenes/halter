@@ -17,14 +17,16 @@
 
 inline void resumeMsg(const ticpp::Element *parent, Msg &currMsg) {
 	parent->FirstChildElement("who")->GetText(&currMsg.who);
+	parent->FirstChildElement("lamport")->GetText(&currMsg.laport);
 	parent->FirstChildElement("instr")->GetText((int *) &currMsg.oper.instr);
 	parent->FirstChildElement("arg")->GetText(&currMsg.oper.arg);
 }
 
 inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
-	int procState, msgNum, slaveId;
+	int procState, msgNum;
+	uint slaveId, lamport;
 	char resume = 1;
-	WaitFor haltState;
+	char haltState;
 	Msg currMsg;
 	ticpp::Element *xmlChanState;
 	ticpp::Iterator<ticpp::Element> it("slave");
@@ -41,17 +43,19 @@ inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
 		(*it).GetAttribute("id", &slaveId);
 		(*it).FirstChildElement("procState")->GetText(&procState);
 		(*it).FirstChildElement("haltState")->GetText((int *) &haltState);
+		(*it).FirstChildElement("lamport")->GetText(&lamport);
 
 #ifdef DEBUG
-		printf("%s: resuming slave id: %d, tid %x\n", PROG_NAME, slaveId, tids[slaveId]);
+		printf("%s: resuming slave id: %u, tid %x\n", PROG_NAME, slaveId, tids[slaveId]);
 		fflush(stdout);
 #endif
 
 		pvm_pkint(&procState, 1, 1);
-		pvm_pkbyte((char *) &haltState, sizeof(WaitFor), 1);
+		pvm_pkbyte(&haltState, 1, 1);
+		pvm_pkuint(&lamport, 1, 1);
 
 #ifdef DEBUG
-		printf("%s: resuming state: %d, halt: %d\n", PROG_NAME, procState, (char) haltState);
+		printf("%s: resuming state: %d, halt: %x, lamport: %d\n", PROG_NAME, procState, (char) haltState, lamport);
 		fflush(stdout);
 #endif
 
@@ -61,7 +65,7 @@ inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
 		pvm_pkint(&msgNum, 1, 1);
 
 #ifdef DEBUG
-		printf("%s: resuming slave id: %d, unpacking %d msg\n", PROG_NAME, slaveId, msgNum);
+		printf("%s: resuming slave id: %u, unpacking %d msg\n", PROG_NAME, slaveId, msgNum);
 		fflush(stdout);
 #endif
 
@@ -95,17 +99,7 @@ int main(int argc, char *argv[]) {
 	tids.resize(slaveNum);
 	pvm_spawn(SLAVENAME, NULL, PvmTaskDefault, "", tids.size(), tids.data());
 
-#ifdef DEBUG
-		printf("%s: spawned\n", PROG_NAME);
-		fflush(stdout);
-#endif
-
 	init(tids);
-
-#ifdef DEBUG
-		printf("%s: after init\n", PROG_NAME);
-		fflush(stdout);
-#endif
 
 	resumeState(tids, xmlRoot);
 

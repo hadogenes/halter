@@ -23,7 +23,6 @@
 
 #define MAX_ITER 1
 
-#include "vclock.h"
 #include "app.h"
 #include "tids.h"
 #include <vector>
@@ -35,10 +34,10 @@ using std::list;
 
 class Monitor : public App {
 	public:
-		Monitor(int procNo, const JobList &jobList, const Tids &tids);
+		Monitor(uint procNo, const JobList &jobList, const Tids &tids);
 
 		void run();
-		void resume(const int savedInstrState, const WaitFor savedHaltState, list<Msg> &msgSaved);
+		void resume(const int savedInstrState, const WaitFor savedHaltState, const uint savedLamport, list< Msg >& msgSaved);
 
 	private:
 		void runRemote();
@@ -58,7 +57,8 @@ class Monitor : public App {
 		list<Msg> chanState;
 		bool involved;
 		int procInstrState;
-		WaitFor procHaltState;
+		char procHaltState;
+		uint procLamportState;
 		int initializer;
 
 };
