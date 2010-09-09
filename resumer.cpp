@@ -2,6 +2,11 @@
 #include <cstdlib>
 #include <pvm3.h>
 
+#include <string>
+#include <sstream>
+using std::string;
+using std::ostringstream;
+
 #define SLAVENAME "slave"
 
 #include <pvm3.h>
@@ -10,7 +15,7 @@
 
 #define TIXML_USE_TICPP
 #include <ticpp.h>
-#define DEFAULT_NAME "/home/C/Studia/PR/halter/halt.xml"
+const string DEFAULT_NAME("/home/C/Studia/PR/halter/halt");
 
 #define PROG_NAME "resumer"
 
@@ -22,28 +27,36 @@ inline void resumeMsg(const ticpp::Element *parent, Msg &currMsg) {
 	parent->FirstChildElement("arg")->GetText(&currMsg.oper.arg);
 }
 
-inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
+inline void resumeState(const Tids &tids) {
 	int procState, msgNum;
 	uint slaveId, lamport;
 	char resume = 1;
 	char haltState;
 	Msg currMsg;
-	ticpp::Element *xmlChanState;
-	ticpp::Iterator<ticpp::Element> it("slave");
+	ostringstream filename;
+	ticpp::Document xmlDoc;
+	ticpp::Element *xmlChanState, *xmlRoot;
+	ticpp::Iterator<ticpp::Element> it("message");
 
 #ifdef DEBUG
 		printf("%s: resuming state...\n", PROG_NAME);
 		fflush(stdout);
 #endif
 
-	for (it = it.begin(xmlRoot); it != it.end(); ++it) {
+	for (uint i = 0; i < tids.size(); ++i) {
 		pvm_initsend(PvmDataDefault);
 		pvm_pkbyte(&resume, 1, 1);
 
-		(*it).GetAttribute("id", &slaveId);
-		(*it).FirstChildElement("procState")->GetText(&procState);
-		(*it).FirstChildElement("haltState")->GetText((int *) &haltState);
-		(*it).FirstChildElement("lamport")->GetText(&lamport);
+		filename.str("");
+		filename << DEFAULT_NAME << i << ".xml";
+
+		xmlDoc.LoadFile(filename.str());
+		xmlRoot = xmlDoc.FirstChildElement("slave");
+
+		xmlRoot->GetAttribute("id", &slaveId);
+		xmlRoot->FirstChildElement("procState")->GetText(&procState);
+		xmlRoot->FirstChildElement("haltState")->GetText((int *) &haltState);
+		xmlRoot->FirstChildElement("lamport")->GetText(&lamport);
 
 #ifdef DEBUG
 		printf("%s: resuming slave id: %u, tid %x\n", PROG_NAME, slaveId, tids[slaveId]);
@@ -59,7 +72,7 @@ inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
 		fflush(stdout);
 #endif
 
-		xmlChanState = (*it).FirstChildElement("chanState");
+		xmlChanState = xmlRoot->FirstChildElement("chanState");
 
 		xmlChanState->GetAttribute("num", &msgNum);
 		pvm_pkint(&msgNum, 1, 1);
@@ -70,8 +83,8 @@ inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
 #endif
 
 		// Zapisywanie stanu kanału
-		for (int i = 0; i < msgNum; ++i) {
-			resumeMsg(xmlChanState, currMsg);
+		for (it = it.begin(xmlChanState); it != it.end(); ++it) {
+			resumeMsg(&(*it), currMsg);
 			pvm_pkbyte((char *) &currMsg, sizeof(Msg), 1);
 		}
 
@@ -80,28 +93,21 @@ inline void resumeState(const Tids &tids, ticpp::Element *xmlRoot) {
 }
 
 int main(int argc, char *argv[]) {
-	ticpp::Document xmlHalter;
-	ticpp::Element *xmlRoot;
-	int slaveNum;
+	if (argc != 2) {
+		printf("Usage: %s <numb of slave>", argv[0]);
+		exit(1);
+	}
+
+	int slaveNum = atoi(argv[1]);
+
 	Tids tids;
-
-	xmlHalter.LoadFile(/*argc == 2 ? argv[1] :*/ DEFAULT_NAME);
-
-	// Pobieranie liczby slave'ów
-	xmlRoot = xmlHalter.FirstChildElement("halter");
-	xmlRoot->GetAttribute("num", &slaveNum);
-
-#ifdef DEBUG
-		printf("%s: slave num: %d\n", PROG_NAME, slaveNum);
-		fflush(stdout);
-#endif
 
 	tids.resize(slaveNum);
 	pvm_spawn(SLAVENAME, NULL, PvmTaskDefault, "", tids.size(), tids.data());
 
 	init(tids);
 
-	resumeState(tids, xmlRoot);
+	resumeState(tids);
 
 	pvm_exit();
 	return 0;

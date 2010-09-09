@@ -1,4 +1,8 @@
 #include <pvm3.h>
+#include <string>
+#include <sstream>
+using std::string;
+using std::ostringstream;
 
 #include "joblist.h"
 #include "tids.h"
@@ -6,7 +10,7 @@
 
 #define TIXML_USE_TICPP
 #include <ticpp.h>
-#define DEFAULT_NAME "/home/C/Studia/PR/halter/halt.xml"
+const string DEFAULT_NAME("/home/C/Studia/PR/halter/halt");
 
 #define PROG_NAME "halter"
 
@@ -28,12 +32,15 @@ inline void saveMsg(const Msg &currMsg, ticpp::Element *parent) {
 		parent->LinkEndChild(xmlMsgArg);
 }
 
-inline void saveState(int ntask, ticpp::Element *xmlRoot) {
+inline void saveState(int ntask) {
 	uint who, lamport;
 	int procState, msgNum;
 	char haltState;
 	Msg currMsg;
-	ticpp::Element *xmlSlave, *xmlProcState, *xmlProcLamport, *xmlHaltState, *xmlChanState;
+	ticpp::Document *xmlHalter;
+	const ticpp::Declaration decl("1.0", "utf-8", "");
+	ticpp::Element *xmlSlave, *xmlProcState, *xmlProcLamport, *xmlHaltState, *xmlChanState, *xmlMsg;
+	ostringstream filename;
 
 #ifdef DEBUG
 	printf("%s: in func saveState\n", PROG_NAME);
@@ -51,6 +58,11 @@ inline void saveState(int ntask, ticpp::Element *xmlRoot) {
 	printf("%s: recived from, id: %d\n", PROG_NAME, who);
 	fflush(stdout);
 #endif
+
+		filename.str("");
+		filename << DEFAULT_NAME << who << ".xml";
+		xmlHalter = new ticpp::Document(filename.str().c_str());
+		xmlHalter->InsertEndChild(decl);
 
 		// Allokowanie pamięci do nowego węzła
 		xmlSlave = new ticpp::Element("slave");
@@ -74,11 +86,17 @@ inline void saveState(int ntask, ticpp::Element *xmlRoot) {
 		// Zapisywanie stanu kanału
 		for (int i = 0; i < msgNum; ++i) {
 			pvm_upkbyte((char *) &currMsg, sizeof(Msg), 1);
-			saveMsg(currMsg, xmlChanState);
+
+			xmlMsg = new ticpp::Element("message");
+			saveMsg(currMsg, xmlMsg);
+			xmlChanState->LinkEndChild(xmlMsg);
 		}
 
 		xmlSlave->LinkEndChild(xmlChanState);
-		xmlRoot->LinkEndChild(xmlSlave);
+		xmlHalter->LinkEndChild(xmlSlave);
+
+		xmlHalter->SaveFile();
+		delete xmlHalter;
 	}
 }
 
@@ -115,17 +133,7 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 #endif
 
-	ticpp::Document xmlHalter;
-	ticpp::Declaration decl("1.0", "utf-8", "");
-	xmlHalter.InsertEndChild(decl);
-
-	ticpp::Element *xmlRoot = new ticpp::Element("halter");
-	xmlRoot->SetAttribute("num", ntask);
-
-	saveState(ntask, xmlRoot);
-
-	xmlHalter.LinkEndChild(xmlRoot);
-	xmlHalter.SaveFile(/*argc == 2 ? argv[1] :*/ DEFAULT_NAME);
+	saveState(ntask);
 
 #ifdef DEBUG
 	printf("%s: saved\n", PROG_NAME);

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<slave id="0">
+    <lamport>5</lamport>
+    <procState>5</procState>
+    <haltState>0</haltState>
+    <chanState num="0" />
+</slave>
