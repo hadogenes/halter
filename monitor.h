@@ -37,7 +37,7 @@ class Monitor : public App {
 		Monitor(uint procNo, const JobList &jobList, const Tids &tids);
 
 		void run();
-		void resume(const int savedInstrState, const WaitFor savedHaltState, const uint savedLamport, list< Msg >& msgSaved);
+		void resume(const HaltState &resumeState, list< Msg >& msgSaved);
 
 	private:
 		void runRemote();
@@ -56,9 +56,7 @@ class Monitor : public App {
 		vector<bool> recvMark;
 		list<Msg> chanState;
 		bool involved;
-		int procInstrState;
-		char procHaltState;
-		uint procLamportState;
+		HaltState haltState;
 		int initializer;
 
 };

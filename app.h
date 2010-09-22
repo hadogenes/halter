@@ -76,7 +76,7 @@ class App {
 		virtual ~App();
 
 		virtual void run() = 0;
-		virtual void resume(const int savedState, const WaitFor savedHaltState, const uint savedLaport, list<Msg> &msgSaved) = 0;
+		virtual void resume(const HaltState &resumeState, list<Msg> &msgSaved) = 0;
 
 	protected:
 		virtual void send(Instr instr, int arg, int objNum) = 0;

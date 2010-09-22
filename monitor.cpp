@@ -67,9 +67,11 @@ void Monitor::recordState(int init) {
 	// Oznaczamy, że od "siebie" odebraliśmy już wiadomość
 	this->recvMark[this->procNo] = true;
 
-	this->procInstrState = this->instrNo;
-	this->procHaltState = this->halt;
-	this->procLamportState = this->lamport;
+	this->haltState.instrNo =  this->instrNo;
+	this->haltState.halt = this->halt;
+	this->haltState.lamport = this->lamport;
+	this->haltState.obj = this->obj;
+	this->haltState.reg = this->reg;
 	this->initializer = init;
 
 	for (uint i = 0; i < this->tids.size(); ++i)
@@ -87,9 +89,7 @@ void Monitor::sendState() {
 	pvm_pkuint(&this->procNo, 1, 1);
 
 	// Zapamiętanie stanu procesu
-	pvm_pkint(&this->procInstrState, 1, 1);
-	pvm_pkbyte((char *) &this->procHaltState, sizeof(this->procHaltState), 1);
-	pvm_pkuint(&this->procLamportState, 1, 1);
+	pvm_pkbyte((char*) &this->haltState, sizeof(this->haltState), 1);
 
 	// Zapamiętanie stanu wiadomości
 	pvm_pkint(&msgNum, 1, 1);
@@ -104,11 +104,13 @@ void Monitor::sendState() {
 	this->chanState.clear();
 }
 
-void Monitor::resume(const int savedInstrState, const WaitFor savedHaltState, const uint savedLamport, list<Msg> &msgSaved) {
+void Monitor::resume(const HaltState& resumeState, list< Msg >& msgSaved) {
 	// Oddtwarzanie stau systemu
-	this->instrNo = savedInstrState;
-	this->halt = savedHaltState;
-	this->lamport = savedLamport;
+	this->instrNo = resumeState.instrNo;
+	this->halt = (WaitFor) resumeState.halt;
+	this->lamport = resumeState.lamport;
+	this->obj = resumeState.obj;
+	this->reg = resumeState.reg;
 
 	// Odtwarzanie stanu wiadomości
 	this->msgBuf.swap(msgSaved);

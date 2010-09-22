@@ -42,6 +42,15 @@ struct Msg {
 	Oper oper;
 };
 
+struct HaltState {
+	int instrNo;
+	int halt;
+	uint lamport;
+	uint obj;
+	uint reg;
+};
+
+
 class JobList : public std::vector<Oper> {
 	public:
 		JobList();

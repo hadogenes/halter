@@ -14,9 +14,8 @@ using std::list;
 
 int main(int argc, char *argv[]) {
 	char resume;
-	int procNo, slaveNum, jobNum, msgNum, savedInstrState;
-	uint lamport;
-	WaitFor savedHaltState;
+	int procNo, slaveNum, jobNum, msgNum;
+	HaltState resumeState;
 	Tids tids;
 	JobList jobList;
 	list<Msg> msgSaved;
@@ -41,9 +40,7 @@ int main(int argc, char *argv[]) {
 
 	if (resume) {
 		Msg newMsg;
-		pvm_upkint(&savedInstrState, 1, 1);
-		pvm_upkbyte((char *) &savedHaltState, sizeof(savedHaltState), 1);
-		pvm_upkuint(&lamport, 1, 1);
+		pvm_upkbyte((char *) &resumeState, sizeof(resumeState), 1);
 
 		pvm_upkint(&msgNum, 1, 1);
 
@@ -56,7 +53,7 @@ int main(int argc, char *argv[]) {
 	app = new Monitor(procNo, jobList, tids);
 
 	if (resume)
-		app->resume(savedInstrState, savedHaltState, lamport, msgSaved);
+		app->resume(resumeState, msgSaved);
 
 	app->run();
 

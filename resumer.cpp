@@ -28,10 +28,10 @@ inline void resumeMsg(const ticpp::Element *parent, Msg &currMsg) {
 }
 
 inline void resumeState(const Tids &tids) {
-	int procState, msgNum;
-	uint slaveId, lamport;
+	int msgNum;
+	uint slaveId;
+	HaltState resumeState;
 	char resume = 1;
-	char haltState;
 	Msg currMsg;
 	ostringstream filename;
 	ticpp::Document xmlDoc;
@@ -54,21 +54,21 @@ inline void resumeState(const Tids &tids) {
 		xmlRoot = xmlDoc.FirstChildElement("slave");
 
 		xmlRoot->GetAttribute("id", &slaveId);
-		xmlRoot->FirstChildElement("procState")->GetText(&procState);
-		xmlRoot->FirstChildElement("haltState")->GetText((int *) &haltState);
-		xmlRoot->FirstChildElement("lamport")->GetText(&lamport);
+		xmlRoot->FirstChildElement("procState")->GetText(&resumeState.instrNo);
+		xmlRoot->FirstChildElement("haltState")->GetText(&resumeState.halt);
+		xmlRoot->FirstChildElement("lamport")->GetText(&resumeState.lamport);
+		xmlRoot->FirstChildElement("obj")->GetText(&resumeState.obj);
+		xmlRoot->FirstChildElement("reg")->GetText(&resumeState.reg);
 
 #ifdef DEBUG
 		printf("%s: resuming slave id: %u, tid %x\n", PROG_NAME, slaveId, tids[slaveId]);
 		fflush(stdout);
 #endif
 
-		pvm_pkint(&procState, 1, 1);
-		pvm_pkbyte(&haltState, 1, 1);
-		pvm_pkuint(&lamport, 1, 1);
+		pvm_pkbyte((char *) &resumeState, sizeof(resumeState), 1);
 
 #ifdef DEBUG
-		printf("%s: resuming state: %d, halt: %x, lamport: %d\n", PROG_NAME, procState, (char) haltState, lamport);
+		printf("%s: resuming state: %d, halt: %x, lamport: %d\n", PROG_NAME, resumeState.instrNo, resumeState.halt, resumeState.lamport);
 		fflush(stdout);
 #endif
 

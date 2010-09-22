@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <slave id="0">
-    <lamport>5</lamport>
-    <procState>5</procState>
-    <haltState>0</haltState>
-    <chanState num="0" />
+    <procState>10</procState>
+    <lamport>11</lamport>
+    <haltState>1</haltState>
+    <obj>72</obj>
+    <reg>78</reg>
+    <chanState num="1">
+        <message>
+            <who>1</who>
+            <lamport>12</lamport>
+            <instr>128</instr>
+            <arg>74</arg>
+        </message>
+    </chanState>
 </slave>

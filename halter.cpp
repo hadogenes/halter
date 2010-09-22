@@ -33,13 +33,13 @@ inline void saveMsg(const Msg &currMsg, ticpp::Element *parent) {
 }
 
 inline void saveState(int ntask) {
-	uint who, lamport;
-	int procState, msgNum;
-	char haltState;
+	uint who;
+	int msgNum;
+	HaltState resumeState;
 	Msg currMsg;
 	ticpp::Document *xmlHalter;
 	const ticpp::Declaration decl("1.0", "utf-8", "");
-	ticpp::Element *xmlSlave, *xmlProcState, *xmlProcLamport, *xmlHaltState, *xmlChanState, *xmlMsg;
+	ticpp::Element *xmlSlave, xmlElement, *xmlChanState, *xmlMsg;
 	ostringstream filename;
 
 #ifdef DEBUG
@@ -50,9 +50,7 @@ inline void saveState(int ntask) {
 	for (; ntask > 0; --ntask) {
 		pvm_recv(-1, STATE);
 		pvm_upkuint(&who, 1, 1);
-		pvm_upkint(&procState, 1, 1);
-		pvm_upkbyte(&haltState, 1, 1);
-		pvm_upkuint(&lamport, 1, 1);
+		pvm_upkbyte((char *) &resumeState, sizeof(resumeState), 1);
 
 #ifdef DEBUG
 	printf("%s: recived from, id: %d\n", PROG_NAME, who);
@@ -66,19 +64,29 @@ inline void saveState(int ntask) {
 
 		// Allokowanie pamięci do nowego węzła
 		xmlSlave = new ticpp::Element("slave");
-		xmlProcState = new ticpp::Element("procState");
-		xmlProcLamport = new ticpp::Element("lamport");
-		xmlHaltState = new ticpp::Element("haltState");
-		xmlChanState = new ticpp::Element("chanState");
-
 		xmlSlave->SetAttribute("id", who);
 
-		xmlProcState->SetText(procState);
-		xmlHaltState->SetText((int) haltState);
-		xmlProcLamport->SetText(lamport);
-		xmlSlave->LinkEndChild(xmlProcLamport);
-		xmlSlave->LinkEndChild(xmlProcState);
-		xmlSlave->LinkEndChild(xmlHaltState);
+		xmlElement.SetValue("procState");
+		xmlElement.SetText(resumeState.instrNo);
+		xmlSlave->InsertEndChild(xmlElement);
+
+		xmlElement.SetValue("lamport");
+		xmlElement.SetText(resumeState.lamport);
+		xmlSlave->InsertEndChild(xmlElement);
+
+		xmlElement.SetValue("haltState");
+		xmlElement.SetText(resumeState.halt);
+		xmlSlave->InsertEndChild(xmlElement);
+
+		xmlElement.SetValue("obj");
+		xmlElement.SetText(resumeState.obj);
+		xmlSlave->InsertEndChild(xmlElement);
+
+		xmlElement.SetValue("reg");
+		xmlElement.SetText(resumeState.reg);
+		xmlSlave->InsertEndChild(xmlElement);
+
+		xmlChanState = new ticpp::Element("chanState");
 
 		pvm_upkint(&msgNum, 1, 1);
 		xmlChanState->SetAttribute("num", msgNum);
